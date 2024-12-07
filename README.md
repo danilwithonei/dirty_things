@@ -33,9 +33,9 @@
 ## Python
 ```bash
 pyenv install --list
-pyenv install 3.10
+pyenv install 3.10.15
 pyenv versions
-pyenv local 3.10
+pyenv local 3.10.15
 ```
 
 ## Venv + Requirements
