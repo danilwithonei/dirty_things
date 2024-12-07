@@ -6,6 +6,7 @@ from typing import Any, List, Tuple
 
 from utils import blur_detection
 from utils import preprocessor
+from utils import utils
 
 
 class DirtDetector:
@@ -21,10 +22,15 @@ class DirtDetector:
         """
         # Загружаем модель
         self.model = YOLO(model_path)
+
         self.preprocessor = preprocessor.normalize
+
         self.blur_threshold = blur_threshold
         self.blur_img_size = blur_img_size
         self.blur_classifier = blur_detection.is_image_blured
+
+        self.percentage = utils.percentage_non_black_pixels
+
 
     def predict(self, img: Any) -> Any:
         """
@@ -44,22 +50,37 @@ class DirtDetector:
 
         # Выполнение инференса с помощью модели YOLO
         results = self.model(img)
-        return results
 
-    def show_results(self, results: Any) -> None:
+        height, width = img.shape[:2]
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        masks = results[0].masks  # Получаем маски из результатов
+        if masks is not None:
+            for mask_array in masks.data:  # Получаем маски как массивы
+                mask_i = mask_array.numpy()  # Преобразуем маску в numpy массив
+
+                # Изменяем размер маски под размер оригинального изображения
+                mask_i_resized = cv2.resize(mask_i, (width, height), interpolation=cv2.INTER_LINEAR)
+
+                # Накладываем маску на пустую маску (255 для белого)
+                mask[mask_i_resized > 0] = 255
+
+        return mask
+    
+
+    def show_results(self, results: np.ndarray) -> None:
         """
         Отображает результаты на изображении.
 
         :param results: Результаты инференса.
         """
 
-        if isinstance(results, np.ndarray):
-            cv2.imshow('Result', results)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        else:
-            for result in results:
-                result.show()
+        print(self.percentage)
+
+        cv2.imshow('Result', results)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
 
 # Пример использования
