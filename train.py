@@ -1,12 +1,37 @@
+import os
 import argparse
+import cv2
 from ultralytics import YOLO
+from utils import preprocessor
 
 
-def main(args):
-    # Load a model
+def prepare_dataset(input: str, output: str) -> None:
+    """
+    Подготавливает набор данных, нормализуя изображения.
+
+    :param input: Путь к директории с исходными изображениями.
+    :param output: Путь к директории, куда будут сохранены нормализованные изображения.
+    """
+    if not os.path.isdir(output):
+        os.mkdir(output)
+
+    for img_name in os.listdir(input):
+        img = cv2.imread(f'{input}/{img_name}')
+        if img is not None:
+            img = preprocessor.normalize(img)
+            cv2.imwrite(f'{output}/{img_name}', img)
+
+
+def main(args) -> None:
+    """
+    Основная функция для обучения модели YOLO.
+
+    :param args: Аргументы командной строки.
+    """
+    # Загрузка модели
     model = YOLO(args.model)
 
-    # Train the model
+    # Обучение модели
     model.train(
         data=args.data,
         epochs=args.epochs,
@@ -57,7 +82,25 @@ if __name__ == "__main__":
         default=False,
         help="Whether to validate the model during training.",
     )
+    parser.add_argument(
+        "--prepare_dataset_input",
+        type=str,
+        default="",
+        help="Path to the input dataset for preparation.",
+    )
+    parser.add_argument(
+        "--prepare_dataset_output",
+        type=str,
+        default="",
+        help="Path to the output dataset after preparation.",
+    )
 
     args = parser.parse_args()
+
+    # Подготовка набора данных, если указаны соответствующие аргументы
+    if len(args.prepare_dataset_input) > 0 and len(args.prepare_dataset_output) > 0:
+        prepare_dataset(input=args.prepare_dataset_input,
+                        output=args.prepare_dataset_output)
+
+    # Обучение модели
     main(args)
-# python train.py --model yolo11n-seg.pt --data data.yaml --epochs 1000 --imgsz 992 --name test_test --device 0 --mosaic 0 --val False
